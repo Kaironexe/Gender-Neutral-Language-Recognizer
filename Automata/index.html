@@ -255,11 +255,7 @@
 </main>
 
 <script>
-/* ------------------------------------------------------------------
-   Term list: each entry has a label, suggested alternatives, and a
-   regular expression (as a string) that matches the term and its
-   common variants such as plurals.
-   ------------------------------------------------------------------ */
+
 const TERMS = [
   { term: "chairman",         alternatives: ["chairperson", "chair"],                    pattern: "chair(?:man|men)" },
   { term: "policeman",        alternatives: ["police officer"],                          pattern: "police(?:man|men)" },
@@ -293,11 +289,11 @@ const TERMS = [
   { term: "manned",           alternatives: ["staffed", "operated"],                     pattern: "manned" },
 ];
 
-/* Precompile one regex per term, plus a combined one for highlighting. */
+
 const wrap = p => "\\b(?:" + p + ")\\b";
 TERMS.forEach(t => {
-  t.regex = new RegExp(wrap(t.pattern), "gi");     // find all occurrences
-  t.exact = new RegExp("^(?:" + t.pattern + ")$", "i"); // identify a matched string
+  t.regex = new RegExp(wrap(t.pattern), "gi"); 
+  t.exact = new RegExp("^(?:" + t.pattern + ")$", "i"); 
 });
 const COMBINED = new RegExp(wrap(TERMS.map(t => "(?:" + t.pattern + ")").join("|")), "gi");
 

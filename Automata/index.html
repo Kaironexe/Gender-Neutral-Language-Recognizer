@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gender-Neutral Language Recognizer</title>
+<style>
+  :root {
+    --bg: #eef2f5;
+    --paper: #ffffff;
+    --ink: #14213d;
+    --muted: #5b667a;
+    --line: #d5dce4;
+    --accent: #0f766e;
+    --accent-dark: #0b5a54;
+    --mark: #ffd84d;
+    --strike: #d64545;
+    --error-bg: #fdeceb;
+    --error-ink: #8a1f17;
+    --ok-bg: #e4f4ee;
+    --ok-ink: #17604a;
+    --info-bg: #e5eef8;
+    --shadow: 0 1px 2px rgba(20,33,61,.06), 0 8px 24px rgba(20,33,61,.07);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ---------- Header ---------- */
+  .hero {
+    background: var(--ink);
+    color: #fff;
+    padding: 56px 20px 84px;
+  }
+  .hero-inner { max-width: 880px; margin: 0 auto; }
+  .hero h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    line-height: 1.1;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lede { margin: 0 0 26px; max-width: 58ch; color: #c4cee0; font-size: 1.05rem; }
+  .swap { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; font-family: Georgia, serif; font-size: 1.25rem; }
+  .swap .old { color: #ffb3b3; text-decoration: line-through; text-decoration-color: var(--strike); text-decoration-thickness: 2px; }
+  .swap .arrow { color: #7be0d4; }
+  .swap .new { background: var(--mark); color: var(--ink); padding: 1px 10px; border-radius: 4px; font-weight: 600; }
+
+  main { max-width: 880px; margin: -48px auto 0; padding: 0 20px 72px; }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: var(--paper);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .card h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.35rem;
+    margin: 0 0 14px;
+  }
+
+  /* ---------- Upload ---------- */
+  .dropzone {
+    border: 2px dashed #b7c3d0;
+    border-radius: 12px;
+    padding: 34px 20px;
+    text-align: center;
+    background: #f8fafb;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone.dragover { border-color: var(--accent); background: #e9f6f4; }
+  .dropzone p { margin: 0 0 14px; color: var(--muted); }
+  .btn {
+    display: inline-block;
+    font: inherit;
+    font-weight: 600;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 22px;
+    cursor: pointer;
+    transition: background .15s, transform .15s;
+  }
+  .btn:hover { background: var(--accent-dark); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible, input[type=file]:focus-visible + label.btn {
+    outline: 3px solid var(--mark);
+    outline-offset: 3px;
+  }
+  input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .filename { margin-top: 12px; font-size: .92rem; color: var(--muted); }
+  .filename:not(:empty)::before { content: "Selected: "; }
+
+  /* ---------- Messages ---------- */
+  .msg {
+    padding: 13px 18px;
+    border-radius: 10px;
+    margin: 0 0 24px;
+    font-weight: 600;
+    border-left: 5px solid transparent;
+  }
+  .msg.error { background: var(--error-bg); color: var(--error-ink); border-left-color: var(--strike); }
+  .msg.ok { background: var(--ok-bg); color: var(--ok-ink); border-left-color: var(--accent); }
+  .msg.info { background: var(--info-bg); color: var(--ink); border-left-color: #3b7dd8; }
+  [hidden] { display: none !important; }
+
+  /* ---------- Table ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; background: var(--paper); }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { background: #f1f5f8; font-size: .88rem; color: var(--muted); }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tbody tr:hover { background: #eef6f5; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tfoot th { background: #f1f5f8; border-bottom: 0; color: var(--ink); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .count {
+    display: inline-block;
+    min-width: 28px;
+    text-align: center;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 999px;
+    padding: 1px 10px;
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  td:last-child { color: var(--accent-dark); font-weight: 600; }
+  code {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: .86em;
+    background: #eaf0f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ---------- Preview ---------- */
+  .preview {
+    background: #fffef8;
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--mark);
+    border-radius: 8px;
+    padding: 18px 20px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 380px;
+    overflow: auto;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.02rem;
+    line-height: 1.75;
+  }
+  mark {
+    background: var(--mark);
+    color: inherit;
+    border-radius: 3px;
+    padding: 1px 3px;
+    box-shadow: 0 2px 0 var(--strike);
+    cursor: help;
+  }
+
+  /* ---------- Patterns ---------- */
+  details { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; background: #f8fafb; }
+  summary { cursor: pointer; font-weight: 600; }
+  summary:focus-visible { outline: 3px solid var(--mark); outline-offset: 3px; }
+  details .table-wrap { margin-top: 14px; }
+  .note { color: var(--muted); font-size: .9rem; margin: 14px 0 0; }
+
+  /* ---------- Small screens and motion ---------- */
+  @media (max-width: 560px) {
+    .hero { padding: 40px 16px 72px; }
+    main { padding: 0 14px 56px; }
+    .card { padding: 18px; }
+    th, td { padding: 10px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <h1>Gender-Neutral Language Recognizer</h1>
+    <p class="lede">Upload a plain-text file. The app finds gender-specific words and phrases and suggests gender-neutral alternatives for you to review.</p>
+    <div class="swap" aria-hidden="true"><span class="old">chairman</span><span class="arrow">&rarr;</span><span class="new">chairperson</span></div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+  <div class="dropzone" id="dropzone">
+    <p>Drag a <strong>.txt</strong> file here, or choose one from your computer.</p>
+    <input type="file" id="fileInput" accept=".txt,text/plain">
+    <label for="fileInput" class="btn">Choose .txt file</label>
+    <div class="filename" id="filename"></div>
+  </div>
+  </section>
+
+  <div id="message" class="msg" hidden role="status"></div>
+
+  <section id="results" class="card" hidden>
+    <h2>Results</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Detected term</th>
+            <th class="num">Occurrences</th>
+            <th>Suggested alternatives</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+        <tfoot>
+          <tr>
+            <th>Total</th>
+            <th class="num" id="totalCount">0</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="note">Suggestions are for review. The right replacement depends on context, so nothing is changed automatically.</p>
+
+    <h2 style="margin-top:28px">Text with detected terms highlighted</h2>
+    <div class="preview" id="preview"></div>
+  </section>
+
+  <section class="card">
+  <h2>Recognition patterns</h2>
+  <details>
+    <summary>Show the regular expression used for each term</summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Term</th><th>Pattern</th></tr></thead>
+        <tbody id="patternBody"></tbody>
+      </table>
+    </div>
+    <p class="note">
+      Every pattern is wrapped as <code>\b(?:pattern)\b</code> and compiled with the <code>i</code> flag.
+      <code>\b</code> is a word boundary, so <code>he or she</code> is matched but the <code>he</code> inside
+      <code>the</code> is not. The <code>i</code> flag makes matching case-insensitive.
+    </p>
+  </details>
+  </section>
+</main>
+
+<script>
+/* ------------------------------------------------------------------
+   Term list: each entry has a label, suggested alternatives, and a
+   regular expression (as a string) that matches the term and its
+   common variants such as plurals.
+   ------------------------------------------------------------------ */
+const TERMS = [
+  { term: "chairman",         alternatives: ["chairperson", "chair"],                    pattern: "chair(?:man|men)" },
+  { term: "policeman",        alternatives: ["police officer"],                          pattern: "police(?:man|men)" },
+  { term: "policewoman",      alternatives: ["police officer"],                          pattern: "police(?:woman|women)" },
+  { term: "fireman",          alternatives: ["firefighter"],                             pattern: "fire(?:man|men)" },
+  { term: "stewardess",       alternatives: ["flight attendant"],                        pattern: "stewardess(?:es)?" },
+  { term: "mankind",          alternatives: ["humankind", "humanity", "people"],         pattern: "mankind" },
+  { term: "businessman",      alternatives: ["businessperson", "business executive"],    pattern: "business(?:man|men|woman|women)" },
+  { term: "salesman",         alternatives: ["salesperson", "sales representative"],     pattern: "sales(?:man|men|woman|women)" },
+  { term: "mailman",          alternatives: ["mail carrier", "postal worker"],           pattern: "mail(?:man|men)" },
+  { term: "cameraman",        alternatives: ["camera operator"],                         pattern: "camera(?:man|men)" },
+  { term: "waitress",         alternatives: ["server", "waiter"],                        pattern: "waitress(?:es)?" },
+  { term: "actress",          alternatives: ["actor"],                                   pattern: "actress(?:es)?" },
+  { term: "manpower",         alternatives: ["workforce", "staff", "personnel"],         pattern: "manpower" },
+  { term: "man-made",         alternatives: ["artificial", "synthetic", "human-made"],   pattern: "man-made" },
+  { term: "ladies and gentlemen", alternatives: ["everyone", "distinguished guests"],    pattern: "ladies\\s+and\\s+gentlemen" },
+  { term: "he or she",        alternatives: ["they"],                                    pattern: "he\\s*(?:or|/)\\s*she" },
+  { term: "his or her",       alternatives: ["their"],                                   pattern: "his\\s*(?:or|/)\\s*her" },
+  { term: "forefathers",      alternatives: ["ancestors", "forebears"],                  pattern: "forefathers?" },
+  { term: "housewife",        alternatives: ["homemaker"],                               pattern: "house(?:wife|wives)" },
+  { term: "spokesman",        alternatives: ["spokesperson"],                            pattern: "spokes(?:man|men|woman|women)" },
+  { term: "congressman",      alternatives: ["legislator", "member of Congress"],        pattern: "congress(?:man|men|woman|women)" },
+  { term: "headmaster",       alternatives: ["principal", "head teacher"],               pattern: "head(?:master|mistress)(?:es|s)?" },
+  { term: "freshman",         alternatives: ["first-year student"],                      pattern: "fresh(?:man|men)" },
+  { term: "layman",           alternatives: ["layperson", "non-specialist"],             pattern: "lay(?:man|men)" },
+  { term: "craftsman",        alternatives: ["artisan", "craftsperson"],                 pattern: "crafts(?:man|men)" },
+  { term: "man-hours",        alternatives: ["work hours", "person-hours"],              pattern: "man-hours?" },
+  { term: "workmanship",      alternatives: ["craftsmanship", "quality of work"],        pattern: "workmanship" },
+  { term: "middleman",        alternatives: ["intermediary", "go-between"],              pattern: "middle(?:man|men)" },
+  { term: "caveman",          alternatives: ["cave dweller", "prehistoric human"],       pattern: "cave(?:man|men)" },
+  { term: "manned",           alternatives: ["staffed", "operated"],                     pattern: "manned" },
+];
+
+/* Precompile one regex per term, plus a combined one for highlighting. */
+const wrap = p => "\\b(?:" + p + ")\\b";
+TERMS.forEach(t => {
+  t.regex = new RegExp(wrap(t.pattern), "gi");     // find all occurrences
+  t.exact = new RegExp("^(?:" + t.pattern + ")$", "i"); // identify a matched string
+});
+const COMBINED = new RegExp(wrap(TERMS.map(t => "(?:" + t.pattern + ")").join("|")), "gi");
+
+/* ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const escapeHtml = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function showMessage(text, kind) {
+  const m = $("message");
+  m.textContent = text;
+  m.className = "msg " + kind;
+  m.hidden = false;
+}
+
+function reset() {
+  $("message").hidden = true;
+  $("results").hidden = true;
+  $("resultsBody").innerHTML = "";
+  $("preview").innerHTML = "";
+}
+
+function analyze(text) {
+  const rows = [];
+  let total = 0;
+
+  for (const t of TERMS) {
+    const found = [...text.matchAll(t.regex)];
+    if (found.length === 0) continue;
+    const forms = [...new Set(found.map(m => m[0].toLowerCase().replace(/\s+/g, " ")))];
+    rows.push({ term: t.term, forms, count: found.length, alternatives: t.alternatives });
+    total += found.length;
+  }
+  return { rows, total };
+}
+
+function highlight(text) {
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(COMBINED)) {
+    const t = TERMS.find(x => x.exact.test(m[0].replace(/\s+/g, " ")) || x.exact.test(m[0]));
+    const tip = t ? "Suggested: " + t.alternatives.join(", ") : "";
+    out += escapeHtml(text.slice(last, m.index));
+    out += '<mark title="' + escapeHtml(tip) + '">' + escapeHtml(m[0]) + "</mark>";
+    last = m.index + m[0].length;
+  }
+  return out + escapeHtml(text.slice(last));
+}
+
+function render({ rows, total }, text) {
+  if (total === 0) {
+    showMessage("No predefined gender-specific terms were detected.", "ok");
+    return;
+  }
+  const body = $("resultsBody");
+  body.innerHTML = rows.map(r => {
+    const variants = r.forms.length > 1 || r.forms[0] !== r.term
+      ? ' <span style="color:var(--muted)">(found: ' + r.forms.map(escapeHtml).join(", ") + ")</span>"
+      : "";
+    return "<tr><td><strong>" + escapeHtml(r.term) + "</strong>" + variants + "</td>" +
+           '<td class="num"><span class="count">' + r.count + "</span></td>" +
+           "<td>" + r.alternatives.map(escapeHtml).join(", ") + "</td></tr>";
+  }).join("");
+  $("totalCount").textContent = total;
+  $("preview").innerHTML = highlight(text);
+  $("results").hidden = false;
+  showMessage(total + " gender-specific " + (total === 1 ? "term" : "terms") + " found. Review the suggestions below.", "info");
+}
+
+async function handleFile(file) {
+  reset();
+  if (!file) return;
+  $("filename").textContent = file.name;
+
+  const isTxt = /\.txt$/i.test(file.name);
+  if (!isTxt) {
+    showMessage("Unsupported file format. Please upload a .txt file.", "error");
+    return;
+  }
+  if (file.size === 0) {
+    showMessage("The file is empty. Please upload a file that contains text.", "error");
+    return;
+  }
+
+  let text;
+  try {
+    text = await file.text();
+  } catch (e) {
+    showMessage("The file could not be read. Please try again.", "error");
+    return;
+  }
+
+  if (text.trim() === "") {
+    showMessage("The file is empty. Please upload a file that contains text.", "error");
+    return;
+  }
+  if (text.includes("\u0000")) {
+    showMessage("This file does not contain readable text. Please upload a plain-text .txt file.", "error");
+    return;
+  }
+
+  render(analyze(text), text);
+}
+
+/* Events */
+$("fileInput").addEventListener("change", e => handleFile(e.target.files[0]));
+
+const dz = $("dropzone");
+["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("dragover"); }));
+["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("dragover"); }));
+dz.addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
+
+/* Pattern reference table */
+$("patternBody").innerHTML = TERMS.map(t =>
+  "<tr><td>" + escapeHtml(t.term) + "</td><td><code>" + escapeHtml(wrap(t.pattern)) + "</code></td></tr>"
+).join("");
+</script>
+</body>
+</html>
